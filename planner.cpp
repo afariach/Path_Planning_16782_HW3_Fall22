@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <stdexcept>
-
+#include "Helper_funcs.h"
 #define SYMBOLS 0
 #define INITIAL 1
 #define GOAL 2
@@ -350,20 +350,24 @@ public:
     {
         symbols.insert(symbol);
     }
+    //Added by AF below
     void add_symbol_vec(string symbol)
     {
         symbols_vec.push_back(symbol);
     }
+    //Added by AF above
     void add_symbols(list<string> symbols)
     {
         for (string l : symbols)
             this->symbols.insert(l);
     }
+    //Added by AF below
     void add_symbols_vec(list<string> symbol)
     {
         for (string l : symbols)
             this->symbols_vec.push_back(l);
     }
+    //Added by AF above
     void add_action(Action action)
     {
         this->actions.insert(action);
@@ -383,6 +387,10 @@ public:
         return this->symbols;
     }
     // Functions added by AF below
+    vector<string> get_symbols_vec()
+    {
+        return this->symbols_vec;
+    }
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> get_initial_condition () const
     {
         return this->initial_conditions;
@@ -767,29 +775,29 @@ list<GroundedAction> planner(Env* env)
 {
     // this is where you insert your planner
 
-    unordered_set<Condition, ConditionHasher, ConditionComparator> preconditions;
-    unordered_set<Condition, ConditionHasher, ConditionComparator> effects;
-    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_precondition;
-    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_effect;
-    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
-    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
+    // unordered_set<Condition, ConditionHasher, ConditionComparator> preconditions;
+    // unordered_set<Condition, ConditionHasher, ConditionComparator> effects;
+    // unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_precondition;
+    // unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_effect;
+    // unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
+    // unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
 
-    Action a1 = env->get_action("MoveToTable");
+    // Action a1 = env->get_action("MoveToTable");
 
-    preconditions = a1.get_preconditions();
-    effects = a1.get_effects();
-
-    for(Condition c:preconditions)
-    {
-        int size_arg = c.get_args().size();
-        list<string> arg_vals;
-        if(size_arg == 1)
-        {
+    // preconditions = a1.get_preconditions();
+    // effects = a1.get_effects();
+    vector<vector<string>> combs = getAllCombinations(env->get_symbols_vec(),3);
+    // for(Condition c:preconditions)
+    // {
+    //     int size_arg = c.get_args().size();
+    //     list<string> arg_vals;
+    //     if(size_arg == 1)
+    //     {
             
-        }
-        GroundedCondition g_precond(c.get_predicate,)
+    //     }
+    //     GroundedCondition g_precond(c.get_predicate,)
 
-    }
+    // }
     // unordered_set<string> test_p = env->get_symbols();
     // while(next_permutation(test_p.begin(),test_p.end()))
     // {
