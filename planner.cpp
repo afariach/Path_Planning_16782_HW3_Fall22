@@ -793,12 +793,12 @@ list<GroundedAction> planner(Env* env)
     //     for(Condition c:preconditions)
     //     {
     //         int size_arg = c.get_args().size();
-    vector<vector<vector<string>>> all_comb(s);
+    vector<vector<vector<string>>> all_comb;
     int max_size = env->get_symbols().size();
-    for(int i = 1; 1 <= max_size;++i)
+    for(int i = 1; i <= max_size;++i)
     {
         vector<vector<string>> combs = getAllCombinations(env->get_symbols_vec(),i);
-        all_combs.push_back(combs);
+        all_comb.push_back(combs);
     }
 
 
