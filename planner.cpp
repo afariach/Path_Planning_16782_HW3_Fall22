@@ -16,6 +16,7 @@
 #define ACTION_DEFINITION 4
 #define ACTION_PRECONDITION 5
 #define ACTION_EFFECT 6
+#define DEBUG true 
 
 class GroundedCondition;
 class Condition;
@@ -783,27 +784,50 @@ list<GroundedAction> planner(Env* env)
     // unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
 
     // Action a1 = env->get_action("MoveToTable");
-
     // preconditions = a1.get_preconditions();
     // effects = a1.get_effects();
-    vector<vector<string>> combs = getAllCombinations(env->get_symbols_vec(),3);
-    // for(Condition c:preconditions)
+    // bool dec_act = false;
+    // int comb_i = 0;
+    // while(!dec_act)
     // {
-    //     int size_arg = c.get_args().size();
-    //     list<string> arg_vals;
-    //     if(size_arg == 1)
+    //     for(Condition c:preconditions)
     //     {
-            
+    //         int size_arg = c.get_args().size();
+    vector<vector<vector<string>>> all_comb(s);
+    int max_size = env->get_symbols().size();
+    for(int i = 1; 1 <= max_size;++i)
+    {
+        vector<vector<string>> combs = getAllCombinations(env->get_symbols_vec(),i);
+        all_combs.push_back(combs);
+    }
+
+
+    //         list<string> arg_vals; 
+    //         for(int i = 0; i < size_arg; ++i)
+    //         {
+    //             arg_vals.push_back(combs[comb_i][i]);
+    //         }
+    //         GroundedCondition precond_i(c.get_predicate(),arg_vals);
+    //         succ_precondition.insert(precond_i);
+    //         #if DEBUG
+    //             cout<<"Number of Arguments in Condition" << endl;
+    //             cout<<size_arg<<endl;
+    //             cout<<"Combination:"<<endl;
+    //             print_vector(combs[comb_i]);
+    //             cout<<"New Condition to evaluate" << endl;
+    //             cout<<precond_i<<endl;
+    //         #endif
     //     }
-    //     GroundedCondition g_precond(c.get_predicate,)
-
+    //     if(succ_precondition == initial_condition)
+    //     {
+    //         #if DEBUG
+    //             cout<<"Precondition Generated" 
+    //         #endif
+    //         break;
+    //     }
+    //     succ_precondition.clear();
+    //     ++comb_i;
     // }
-    // unordered_set<string> test_p = env->get_symbols();
-    // while(next_permutation(test_p.begin(),test_p.end()))
-    // {
-    //     cout<<"perm"<<endl;
-    // }
-
 
 
     //Check if preconditions are met 
@@ -816,9 +840,9 @@ list<GroundedAction> planner(Env* env)
 
     // blocks world example
     list<GroundedAction> actions;
-    actions.push_back(GroundedAction("MoveToTable", { "A", "B" }));
-    actions.push_back(GroundedAction("Move", { "C", "Table", "A" }));
-    actions.push_back(GroundedAction("Move", { "B", "Table", "C" }));
+    // actions.push_back(GroundedAction("MoveToTable", { "A", "B" }));
+    // actions.push_back(GroundedAction("Move", { "C", "Table", "A" }));
+    // actions.push_back(GroundedAction("Move", { "B", "Table", "C" }));
 
     return actions;
 }
@@ -844,6 +868,8 @@ int main(int argc, char* argv[])
     {
         cout << gac << endl;
     }
+    
+    delete env; 
 
     return 0;
 }

@@ -26,6 +26,14 @@ template<typename T> std::vector<std::vector<T>> getAllCombinations(const std::v
     return combinations;
 }
 
+template<typename T> void print_vector(const std::vector<T>& inputVector)
+{
+    for(int i = 0; i < inputVector.size(); ++i)
+    {
+        std::cout<<inputVector[i] <<", ";
+    }
+    std::cout<<std::endl;
+}
 // template<typename T> std::vector<std::vector<T>> subsets(int n, int r)
 //     {
 //     std::vector<bool> v(n);
