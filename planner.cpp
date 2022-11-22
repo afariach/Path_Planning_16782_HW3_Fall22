@@ -776,73 +776,50 @@ list<GroundedAction> planner(Env* env)
 {
     // this is where you insert your planner
 
-    // unordered_set<Condition, ConditionHasher, ConditionComparator> preconditions;
-    // unordered_set<Condition, ConditionHasher, ConditionComparator> effects;
-    // unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_precondition;
-    // unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_effect;
-    // unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
-    // unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
-
-    // Action a1 = env->get_action("MoveToTable");
-    // preconditions = a1.get_preconditions();
-    // effects = a1.get_effects();
-    // bool dec_act = false;
-    // int comb_i = 0;
-    // while(!dec_act)
-    // {
-    //     for(Condition c:preconditions)
-    //     {
-    //         int size_arg = c.get_args().size();
-    vector<vector<vector<string>>> all_comb;
+    unordered_set<Condition, ConditionHasher, ConditionComparator> preconditions;
+    unordered_set<Condition, ConditionHasher, ConditionComparator> effects;
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_precondition;
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_effect;
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
+    //All possible combinations of symbols. With all possible subsets
+    vector<vector<list<string>>> all_comb;
     int max_size = env->get_symbols().size();
     for(int i = 1; i <= max_size;++i)
     {
-        vector<vector<string>> combs = getAllCombinations(env->get_symbols_vec(),i);
+        vector<list<string>> combs = getAllCombinations(env->get_symbols_vec(),i);
         all_comb.push_back(combs);
     }
-
-
-    //         list<string> arg_vals; 
-    //         for(int i = 0; i < size_arg; ++i)
-    //         {
-    //             arg_vals.push_back(combs[comb_i][i]);
-    //         }
-    //         GroundedCondition precond_i(c.get_predicate(),arg_vals);
-    //         succ_precondition.insert(precond_i);
-    //         #if DEBUG
-    //             cout<<"Number of Arguments in Condition" << endl;
-    //             cout<<size_arg<<endl;
-    //             cout<<"Combination:"<<endl;
-    //             print_vector(combs[comb_i]);
-    //             cout<<"New Condition to evaluate" << endl;
-    //             cout<<precond_i<<endl;
-    //         #endif
-    //     }
-    //     if(succ_precondition == initial_condition)
-    //     {
-    //         #if DEBUG
-    //             cout<<"Precondition Generated" 
-    //         #endif
-    //         break;
-    //     }
-    //     succ_precondition.clear();
-    //     ++comb_i;
-    // }
-
-
+    Action a1 = env->get_action("MoveToTable");
+    preconditions = a1.get_preconditions();
+    effects = a1.get_effects();
+    bool dec_act = false;
+    int comb_i = 0;
+    while(!dec_act)
+    {
+        for(Condition c:preconditions)
+            {
+                auto c_predicate = c.get_predicate();
+                int  a_arg_size = a1.get_args().size();
+                auto symbol_comb = all_comb[a_arg_size-1][comb_i]; 
+                auto artificial_cond = GroundedCondition(c_predicate,symbol_comb);
+                succ_precondition.insert(artificial_cond);
+            }
+        if(succ_precondition == initial_condition)
+            break;
+        ++comb_i;
+        succ_precondition.clear();
+    }
     //Check if preconditions are met 
-    //If that's the case then apply effect, but how?
-    //Do I need to change it manually?
-    //Also need to change from GroundedCondition to Condition 
-
-    //   if(initial_condition == a1.get_preconditions())
-
+    // If that's the case then apply effect, but how?
+    // Do I need to change it manually?
+    // Also need to change from GroundedCondition to Condition 
 
     // blocks world example
     list<GroundedAction> actions;
-    // actions.push_back(GroundedAction("MoveToTable", { "A", "B" }));
-    // actions.push_back(GroundedAction("Move", { "C", "Table", "A" }));
-    // actions.push_back(GroundedAction("Move", { "B", "Table", "C" }));
+    actions.push_back(GroundedAction("MoveToTable", { "A", "B" }));
+    actions.push_back(GroundedAction("Move", { "C", "Table", "A" }));
+    actions.push_back(GroundedAction("Move", { "B", "Table", "C" }));
 
     return actions;
 }
