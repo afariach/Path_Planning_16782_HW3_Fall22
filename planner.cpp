@@ -327,6 +327,7 @@ private:
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_conditions;
     unordered_set<Action, ActionHasher, ActionComparator> actions;
     unordered_set<string> symbols;
+    vector<string> symbols_vec;
 
 public:
     void remove_initial_condition(GroundedCondition gc)
@@ -349,10 +350,19 @@ public:
     {
         symbols.insert(symbol);
     }
+    void add_symbol_vec(string symbol)
+    {
+        symbols_vec.push_back(symbol);
+    }
     void add_symbols(list<string> symbols)
     {
         for (string l : symbols)
             this->symbols.insert(l);
+    }
+    void add_symbols_vec(list<string> symbol)
+    {
+        for (string l : symbols)
+            this->symbols_vec.push_back(l);
     }
     void add_action(Action action)
     {
@@ -372,6 +382,16 @@ public:
     {
         return this->symbols;
     }
+    // Functions added by AF below
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> get_initial_condition () const
+    {
+        return this->initial_conditions;
+    }
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> get_goal_condition () const
+    {
+        return this->goal_conditions;
+    }
+    //Functions added by AF above
 
     friend ostream& operator<<(ostream& os, const Env& w)
     {
@@ -516,6 +536,8 @@ Env* create_env(char* filename)
                     sregex_token_iterator end;
 
                     env->add_symbols(parse_symbols(iter->str()));  // fixed
+
+                    env->add_symbols_vec(parse_symbols(iter->str()));
 
                     parser = INITIAL;
                 }
@@ -744,6 +766,45 @@ Env* create_env(char* filename)
 list<GroundedAction> planner(Env* env)
 {
     // this is where you insert your planner
+
+    unordered_set<Condition, ConditionHasher, ConditionComparator> preconditions;
+    unordered_set<Condition, ConditionHasher, ConditionComparator> effects;
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_precondition;
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_effect;
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
+
+    Action a1 = env->get_action("MoveToTable");
+
+    preconditions = a1.get_preconditions();
+    effects = a1.get_effects();
+
+    for(Condition c:preconditions)
+    {
+        int size_arg = c.get_args().size();
+        list<string> arg_vals;
+        if(size_arg == 1)
+        {
+            
+        }
+        GroundedCondition g_precond(c.get_predicate,)
+
+    }
+    // unordered_set<string> test_p = env->get_symbols();
+    // while(next_permutation(test_p.begin(),test_p.end()))
+    // {
+    //     cout<<"perm"<<endl;
+    // }
+
+
+
+    //Check if preconditions are met 
+    //If that's the case then apply effect, but how?
+    //Do I need to change it manually?
+    //Also need to change from GroundedCondition to Condition 
+
+    //   if(initial_condition == a1.get_preconditions())
+
 
     // blocks world example
     list<GroundedAction> actions;
