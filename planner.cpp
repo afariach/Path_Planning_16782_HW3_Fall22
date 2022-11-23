@@ -440,6 +440,17 @@ public:
             this->arg_values.push_back(ar);
         }
     }
+    // Code Added by AF below
+    GroundedAction(string name,vector<string> arg_values)
+    :name{name}
+    {
+        this->name = name;
+        for (string ar:arg_values)
+        {
+            this->arg_values.push_back(ar);
+        }
+    }
+    //Code Added by AF Above
 
     string get_name() const
     {
@@ -772,43 +783,178 @@ Env* create_env(char* filename)
     return env;
 }
 
-list<GroundedAction> planner(Env* env)
+//------------------Code added by AF below
+list<GroundedAction> gen_fsble_actions(
+    Env* env,
+    vector<vector<vector<string>>>& all_comb,
+    Action& action,
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& actual_condition
+)
 {
-    // this is where you insert your planner
-
     unordered_set<Condition, ConditionHasher, ConditionComparator> preconditions;
-    unordered_set<Condition, ConditionHasher, ConditionComparator> effects;
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_precondition;
-    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_effect;
-    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
-    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
-    //All possible combinations of symbols. With all possible subsets
-    vector<vector<list<string>>> all_comb;
-    int max_size = env->get_symbols().size();
-    for(int i = 1; i <= max_size;++i)
-    {
-        vector<list<string>> combs = getAllCombinations(env->get_symbols_vec(),i);
-        all_comb.push_back(combs);
-    }
-    Action a1 = env->get_action("MoveToTable");
-    preconditions = a1.get_preconditions();
-    effects = a1.get_effects();
-    bool dec_act = false;
+    preconditions = action.get_preconditions();
+    list<GroundedAction> feasible_actions;
+    auto a_args = action.get_args();
+    auto a_predicate = action.get_name();
+    vector<string> combs_arg;
+    int arg_idx = 0; 
     int comb_i = 0;
-    while(!dec_act)
+    int  a_arg_size = action.get_args().size();
+    bool equal_cond = false;
+    unordered_map<string,int> args_2_idx; 
+    //Creating a structure to map the args in actions to idx 
+    for (auto it=a_args.begin(); it != a_args.end(); ++it)
     {
+        args_2_idx[*it] = arg_idx;
+        ++arg_idx;
+    }
+    //While loop to create all possible combinations of actions
+    while(comb_i < all_comb[a_arg_size-1].size())
+    {
+        //Creating a vector with all possible combinations of the same size of the arguments in the action(Vector of vectors of strings)
+        combs_arg = all_comb[a_arg_size-1][comb_i];
+        //After creating the map, now is time to check preconditions
         for(Condition c:preconditions)
             {
                 auto c_predicate = c.get_predicate();
-                int  a_arg_size = a1.get_args().size();
-                auto symbol_comb = all_comb[a_arg_size-1][comb_i]; 
-                auto artificial_cond = GroundedCondition(c_predicate,symbol_comb);
-                succ_precondition.insert(artificial_cond);
+                auto c_args = c.get_args();
+                list<string> precond_arg; 
+                for (auto it=c_args.begin(); it != c_args.end(); ++it)
+                {   
+                    if(args_2_idx.find(*it)!= args_2_idx.end())
+                    {
+                        int symbol_idx = args_2_idx[*it];
+                        string symbol_precond = combs_arg[symbol_idx];
+                        precond_arg.push_back(symbol_precond);
+                    }
+                    else
+                    {
+                        precond_arg.push_back(*it);
+                    }
+                }
+                auto artificial_precond = GroundedCondition(c_predicate,precond_arg);
+                succ_precondition.insert(artificial_precond);
             }
-        if(succ_precondition == initial_condition)
-            break;
+        for(GroundedCondition cond:succ_precondition)
+        {
+            if(actual_condition.find(cond) != actual_condition.end())
+                {
+                    equal_cond = true;
+                    continue;
+                }
+            else
+                {
+                    equal_cond = false;
+                    succ_precondition.clear();
+                    break;
+                }
+        }
         ++comb_i;
-        succ_precondition.clear();
+        if(equal_cond)
+        {
+            GroundedAction fsble_grnd_action = GroundedAction(a_predicate,combs_arg);
+            feasible_actions.push_back(fsble_grnd_action);
+        }
+    }
+    return feasible_actions;
+    
+}
+
+ unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> execute_action(
+    Env* env,
+    Action& action,
+    GroundedAction& feasible_action,
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& actual_condition
+)
+{
+    unordered_set<Condition, ConditionHasher, ConditionComparator> a_effects;
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_effect;
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> affected_condition;
+    unordered_map<string,int> args_2_idx; 
+
+    affected_condition = actual_condition;
+    a_effects = action.get_effects();
+    auto a_args = action.get_args();
+    auto a_predicate = action.get_name();
+    auto fsbl_action_args_lst = feasible_action.get_arg_values();
+    vector<string> feasible_action_args;
+    int arg_idx = 0; 
+    int comb_i = 0;
+    int  a_arg_size = action.get_args().size();
+    bool applied_effect = false;
+    //Creating a structure to map the args in actions to idx 
+    for (auto it=a_args.begin(); it != a_args.end(); ++it)
+    {
+        args_2_idx[*it] = arg_idx;
+        ++arg_idx;
+    }
+    for (auto it = fsbl_action_args_lst.begin(); it != fsbl_action_args_lst.end(); ++it)
+    {
+        feasible_action_args.push_back(*it);
+    }
+    //While loop to create all possible combinations of actions
+    //Creating a vector with all possible combinations of the same size of the arguments in the action(Vector of vectors of strings)
+    //After creating the map, now is time to check preconditions
+    for(Condition c:a_effects)
+        {
+            auto c_predicate = c.get_predicate();
+            auto c_args = c.get_args();
+            list<string> precond_arg; 
+            for (auto it=c_args.begin(); it != c_args.end(); ++it)
+            {   
+                if(args_2_idx.find(*it)!= args_2_idx.end())
+                {
+                    int symbol_idx = args_2_idx[*it];
+                    string symbol_precond = feasible_action_args[symbol_idx];
+                    precond_arg.push_back(symbol_precond);
+                }
+                else
+                {
+                    precond_arg.push_back(*it);
+                }
+            }
+            auto artificial_precond = GroundedCondition(c_predicate,precond_arg,c.get_truth());
+            succ_effect.insert(artificial_precond);
+        }
+    for(auto itr = succ_effect.begin(); itr != succ_effect.end();++itr)
+    {
+        GroundedCondition gr_effect = *itr;
+        if(!gr_effect.get_truth())
+            {
+                affected_condition.erase(GroundedCondition(gr_effect.get_predicate(),gr_effect.get_arg_values()));
+            }
+        else
+            {
+                affected_condition.insert(GroundedCondition(gr_effect.get_predicate(),gr_effect.get_arg_values()));
+            }
+    }
+
+    // affected_condition.erase(GroundedCondition("Clear",{"A"}));
+    return affected_condition;
+}
+//------------------Code added by AF above
+
+list<GroundedAction> planner(Env* env)
+{
+    // this is where you insert your planner
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> successor_condition;
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
+    //All possible combinations of symbols. With all possible subsets
+    vector<vector<vector<string>>> all_comb;
+    int max_size = env->get_symbols().size();
+    //Creating all possible combinations of symbols for all possible subsets. 
+    for(int i = 1; i <= max_size;++i)
+    {
+        vector<vector<string>> combs = getAllCombinations(env->get_symbols_vec(),i);
+        all_comb.push_back(combs);
+    }
+    Action a1 = env->get_action("Move");
+    list<GroundedAction> feasible_actions = gen_fsble_actions(env,all_comb,a1,initial_condition);
+    for(auto it = feasible_actions.begin(); it!=feasible_actions.end();++it)
+    {
+        successor_condition = execute_action(env,a1,*it,initial_condition);
     }
     //Check if preconditions are met 
     // If that's the case then apply effect, but how?
@@ -817,9 +963,9 @@ list<GroundedAction> planner(Env* env)
 
     // blocks world example
     list<GroundedAction> actions;
-    actions.push_back(GroundedAction("MoveToTable", { "A", "B" }));
-    actions.push_back(GroundedAction("Move", { "C", "Table", "A" }));
-    actions.push_back(GroundedAction("Move", { "B", "Table", "C" }));
+    // actions.push_back(GroundedAction("MoveToTable", { "A", "B" }));
+    // actions.push_back(GroundedAction("Move", { "C", "Table", "A" }));
+    // actions.push_back(GroundedAction("Move", { "B", "Table", "C" }));
 
     return actions;
 }

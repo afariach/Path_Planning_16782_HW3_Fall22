@@ -2,24 +2,24 @@
 * Function return all possible combinations of k elements from N-size inputVector.
 * The result is returned as a vector of k-long vectors containing all combinations.
 */
-template<typename T> std::vector<std::list<T>> getAllCombinations(const std::vector<T>& inputVector, int k)
+template<typename T> std::vector<std::vector<T>> getAllCombinations(const std::vector<T>& inputVector, int k)
 {
-    std::vector<std::list<T>> combinations;
+    std::vector<std::vector<T>> combinations;
     std::vector<int> selector(inputVector.size());
     std::fill(selector.begin(), selector.begin() + k, 1);
 
     do {
         std::vector<int> selectedIds;
-        std::list<T> selectedListElements;
+        std::vector<T> selectedVectorElements;
         for (int i = 0; i < inputVector.size(); i++)
             if (selector[i]) 
                 selectedIds.push_back(i);
         do
         { 
             for (auto& id : selectedIds) 
-                selectedListElements.push_back(inputVector[id]);
-            combinations.push_back(selectedListElements);
-            selectedListElements.clear();
+                selectedVectorElements.push_back(inputVector[id]);
+            combinations.push_back(selectedVectorElements);
+            selectedVectorElements.clear();
         }while(next_permutation(selectedIds.begin(),selectedIds.end()));
     } while (std::prev_permutation(selector.begin(), selector.end()));
 
