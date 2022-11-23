@@ -402,6 +402,15 @@ public:
     {
         return this->goal_conditions;
     }
+    list<Action> get_actions()
+    {
+        list<Action> available_actions;
+        for(Action a:actions)
+        {
+            available_actions.push_back(a);
+        }
+        return available_actions;
+    }
     //Functions added by AF above
 
     friend ostream& operator<<(ostream& os, const Env& w)
@@ -434,20 +443,21 @@ private:
     list<string> arg_values;
 
 public:
-    GroundedAction(string name, list<string> arg_values)
-    {
-        this->name = name;
-        for (string ar : arg_values)
-        {
-            this->arg_values.push_back(ar);
-        }
-    }
     // Code Added by AF below
     GroundedAction(string name,vector<string> arg_values)
     :name{name}
     {
         this->name = name;
         for (string ar:arg_values)
+        {
+            this->arg_values.push_back(ar);
+        }
+    }
+    GroundedAction(string name, list<string> arg_values)
+    :name{name}
+    {
+        this->name = name;
+        for (string ar : arg_values)
         {
             this->arg_values.push_back(ar);
         }
@@ -526,10 +536,14 @@ class node
         double g,h,f;
         node* parent;
         double a = numeric_limits<double>::infinity(); 
+        GroundedAction applied_action;
     public:
         
-        node(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> state, double g, double h,node* parent)
-        :node_conditions{state},g{g},h{h},parent{parent}{ f = g+h;}
+        node(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> state, double g, double h,node* parent,GroundedAction action)
+        :node_conditions{state},g{g},h{h},parent{parent},applied_action{action}
+        {
+            this->f= g+h;
+        }
         void set_g(double g)
         {
             this->g = g;
@@ -546,6 +560,10 @@ class node
         {
             this->node_conditions = conditions;
         }
+        void set_applied_action(GroundedAction action)
+        {
+            this->applied_action = action;
+        }
         double get_f_value() const
         {
             return this->f;
@@ -553,6 +571,14 @@ class node
         double get_g_value() const
         {
             return this->g; 
+        }
+        node* get_parent() const
+        {
+            this->parent;
+        }
+        GroundedAction get_applied_action()
+        {
+            return this->applied_action;
         }
         unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> get_condition() const
         {
@@ -1029,13 +1055,45 @@ list<GroundedAction> ComputeSymbolicAstar(
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> successor_condition;
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
+    list<GroundedAction> path; 
     vector<vector<vector<string>>> all_comb;
     int max_size = env->get_symbols().size();
+    int matched_conditions = 0;
     //Creating all possible combinations of symbols for all possible subsets. 
     for(int i = 1; i <= max_size;++i)
     {
         vector<vector<string>> combs = getAllCombinations(env->get_symbols_vec(),i);
         all_comb.push_back(combs);
+    }
+    //Heurisctics as 0 for the moment
+    //Initializing Open list 
+    open_ptr.emplace(new node(initial_condition,0,0,nullptr,GroundedAction("No_action",list<string> {"A"})));
+    while(!open_ptr.empty())
+    {
+        node* actual_node = open_ptr.top();
+        close_list.insert(actual_node);
+        auto actual_gc = actual_node->get_condition();
+        for(GroundedCondition c:actual_gc)
+        {
+            if(goal_condition.find(c)!= goal_condition.end())
+            {
+                ++matched_conditions;
+                if(matched_conditions == goal_condition.size())
+                {
+                    cout<<"Goal founded!" << endl;
+                    path.push_back(actual_node->get_applied_action());
+                    while(!(path.back().get_name() == "No_Action"))
+                    {
+                        node* father = actual_node->;
+                        path_.emplace_back(father);
+                    }
+                    cout<<"Exporting computed path" << endl;
+                    return;
+                }
+            }
+        }
+        
+
     }
     Action a1 = env->get_action("Move");
     list<GroundedAction> feasible_actions = gen_fsble_actions(env,all_comb,a1,initial_condition);
