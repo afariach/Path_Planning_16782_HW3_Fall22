@@ -1046,7 +1046,7 @@ list<GroundedAction> gen_fsble_actions(
     return affected_condition;
 }
 
-list<GroundedAction> ComputeSymbolicAstar(
+list<node*> ComputeSymbolicAstar(
     Env* env
 )
 {
@@ -1055,7 +1055,7 @@ list<GroundedAction> ComputeSymbolicAstar(
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> successor_condition;
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
-    list<GroundedAction> path; 
+    list<node*> path; 
     vector<vector<vector<string>>> all_comb;
     int max_size = env->get_symbols().size();
     int matched_conditions = 0;
@@ -1065,14 +1065,17 @@ list<GroundedAction> ComputeSymbolicAstar(
         vector<vector<string>> combs = getAllCombinations(env->get_symbols_vec(),i);
         all_comb.push_back(combs);
     }
+
     //Heurisctics as 0 for the moment
     //Initializing Open list 
     open_ptr.emplace(new node(initial_condition,0,0,nullptr,GroundedAction("No_action",list<string> {"A"})));
+    
     while(!open_ptr.empty())
     {
         node* actual_node = open_ptr.top();
         close_list.insert(actual_node);
         auto actual_gc = actual_node->get_condition();
+        //Goal Checking 
         for(GroundedCondition c:actual_gc)
         {
             if(goal_condition.find(c)!= goal_condition.end())
@@ -1081,25 +1084,30 @@ list<GroundedAction> ComputeSymbolicAstar(
                 if(matched_conditions == goal_condition.size())
                 {
                     cout<<"Goal founded!" << endl;
-                    path.push_back(actual_node->get_applied_action());
-                    while(!(path.back().get_name() == "No_Action"))
+                    path.push_back(actual_node);
+                    while(!(path.back()->get_applied_action().get_name() == "No_Action"))
                     {
-                        node* father = actual_node->;
-                        path_.emplace_back(father);
+                        node* father = path.back()->get_parent();
+                        path.emplace_back(father);
                     }
                     cout<<"Exporting computed path" << endl;
                     return;
                 }
             }
         }
-        
+        list<Action> available_act = env->get_actions();
+        for(Action a:available_act)
+        {
+            list<GroundedAction> feasible_actions = gen_fsble_actions(env,all_comb,a,initial_condition);
+            for(auto it = feasible_actions.begin(); it!=feasible_actions.end();++it)
+            {
+                successor_condition = execute_action(env,a,*it,initial_condition);
+                double g_val = actual_node->get_g_value() + 1;
+                double h_val = 0;
+                node* succ_node = new node(successor_condition,g_val,h_val,actual_node,*it);
+            }
+        }
 
-    }
-    Action a1 = env->get_action("Move");
-    list<GroundedAction> feasible_actions = gen_fsble_actions(env,all_comb,a1,initial_condition);
-    for(auto it = feasible_actions.begin(); it!=feasible_actions.end();++it)
-    {
-        successor_condition = execute_action(env,a1,*it,initial_condition);
     }
 }
 //------------------Code added by AF above
@@ -1107,8 +1115,16 @@ list<GroundedAction> ComputeSymbolicAstar(
 list<GroundedAction> planner(Env* env)
 {
     // blocks world example
-    list<GroundedAction> actions = ComputeSymbolicAstar(env);
-    return actions;
+    list<node*> node_path = ComputeSymbolicAstar(env);
+    node_path.pop_front();
+    list<GroundedAction> actions_path; 
+
+    for(reverse_iterator itr = node_path.rbegin() ; itr != node_path.rend(); ++itr)
+    {
+        node* n = *itr;
+        actions_path.push_back(n->get_applied_action());
+    }
+    return actions_path;
 }
 
 int main(int argc, char* argv[])
