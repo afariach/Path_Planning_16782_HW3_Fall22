@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <algorithm>
 #include <stdexcept>
+#include <limits>
+#include <queue>
 #include "Helper_funcs.h"
 #define SYMBOLS 0
 #define INITIAL 1
@@ -516,6 +518,37 @@ list<string> parse_symbols(string symbols_str)
     return symbols;
 }
 
+//------------------Code added by AF below
+class node 
+{
+    private:
+        unordered_set<Condition, ConditionHasher, ConditionComparator> node_conditions;
+        double g,h,f;
+        node* parent;
+        double a = numeric_limits<double>::infinity(); 
+    public:
+        
+        node(unordered_set<Condition, ConditionHasher, ConditionComparator> state, double g, double h,node* parent)
+        :node_conditions{state},g{g},h{h},parent{parent}{ f = g+h;}
+        void set_g(double g)
+        {
+            this->g = g;
+        }
+        void set_h(double h)
+        {
+            this->h = h;
+        }
+        void set_parent(node* parent)
+        {
+            this->parent = parent;
+        }
+        void set_conditions(unordered_set<Condition, ConditionHasher, ConditionComparator> conditions)
+        {
+            this->node_conditions = conditions;
+        }
+};
+//------------------Code added by AF above
+
 Env* create_env(char* filename)
 {
     ifstream input_file(filename);
@@ -933,9 +966,10 @@ list<GroundedAction> gen_fsble_actions(
     // affected_condition.erase(GroundedCondition("Clear",{"A"}));
     return affected_condition;
 }
-//------------------Code added by AF above
 
-list<GroundedAction> planner(Env* env)
+list<GroundedAction> ComputeSymbolicAstar(
+    Env* env
+)
 {
     // this is where you insert your planner
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> successor_condition;
@@ -956,17 +990,13 @@ list<GroundedAction> planner(Env* env)
     {
         successor_condition = execute_action(env,a1,*it,initial_condition);
     }
-    //Check if preconditions are met 
-    // If that's the case then apply effect, but how?
-    // Do I need to change it manually?
-    // Also need to change from GroundedCondition to Condition 
+}
+//------------------Code added by AF above
 
+list<GroundedAction> planner(Env* env)
+{
     // blocks world example
-    list<GroundedAction> actions;
-    // actions.push_back(GroundedAction("MoveToTable", { "A", "B" }));
-    // actions.push_back(GroundedAction("Move", { "C", "Table", "A" }));
-    // actions.push_back(GroundedAction("Move", { "B", "Table", "C" }));
-
+    list<GroundedAction> actions = ComputeSymbolicAstar(env);
     return actions;
 }
 
