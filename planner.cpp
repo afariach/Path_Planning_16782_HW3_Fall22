@@ -522,13 +522,13 @@ list<string> parse_symbols(string symbols_str)
 class node 
 {
     private:
-        unordered_set<Condition, ConditionHasher, ConditionComparator> node_conditions;
+        unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> node_conditions;
         double g,h,f;
         node* parent;
         double a = numeric_limits<double>::infinity(); 
     public:
         
-        node(unordered_set<Condition, ConditionHasher, ConditionComparator> state, double g, double h,node* parent)
+        node(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> state, double g, double h,node* parent)
         :node_conditions{state},g{g},h{h},parent{parent}{ f = g+h;}
         void set_g(double g)
         {
@@ -542,10 +542,63 @@ class node
         {
             this->parent = parent;
         }
-        void set_conditions(unordered_set<Condition, ConditionHasher, ConditionComparator> conditions)
+        void set_conditions(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> conditions)
         {
             this->node_conditions = conditions;
         }
+        double get_f_value() const
+        {
+            return this->f;
+        }
+        double get_g_value() const
+        {
+            return this->g; 
+        }
+        unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> get_condition() const
+        {
+            return this->node_conditions;
+        }
+
+};
+
+string unordered_set_to_string(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& conditions_set)
+{
+    string cond_string ="";
+    for(auto it = conditions_set.begin(); it!=conditions_set.end();++it)
+    {
+        GroundedCondition cond = *it;
+        cond_string += cond.toString();
+    }
+    return cond_string;
+}
+
+struct custom
+{
+	bool operator() (node* a,node* b) const{
+    return a->get_f_value() > b->get_f_value();};
+};
+
+struct nodeComparator
+{
+    bool operator()(const node* lhs,const node* rhs) const
+    {   
+        auto set_lhs = lhs->get_condition();
+        auto set_rhs = rhs->get_condition();
+        string lhs_string = unordered_set_to_string(set_lhs);
+        string rhs_string = unordered_set_to_string(set_rhs);
+
+        return lhs_string == rhs_string;
+    }
+};
+
+struct nodeHasher
+{
+    size_t operator()(const node* node_cond) const
+    {
+        auto set = node_cond->get_condition();
+        string set_string = unordered_set_to_string(set);
+        return hash<string>{}(set_string);
+    }
 };
 //------------------Code added by AF above
 
@@ -971,11 +1024,11 @@ list<GroundedAction> ComputeSymbolicAstar(
     Env* env
 )
 {
-    // this is where you insert your planner
+    priority_queue<node*,vector<node*>,custom> open_ptr;
+    unordered_set<node*,nodeHasher,nodeComparator> close_list;
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> successor_condition;
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
-    //All possible combinations of symbols. With all possible subsets
     vector<vector<vector<string>>> all_comb;
     int max_size = env->get_symbols().size();
     //Creating all possible combinations of symbols for all possible subsets. 
