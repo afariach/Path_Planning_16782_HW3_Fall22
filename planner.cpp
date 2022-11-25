@@ -1107,6 +1107,7 @@ list<GroundedAction> ComputeSymbolicAstar(
         if(match_cond >= goal_num_gc)
         {
             cout<<"Goal founded!" << endl;
+            cout<<"Node State:"<< endl;
             path.push_back(actual_node);
             cout<<actual_node->get_condition()<<endl;
             while(!(path.back()->get_parent() == nullptr))
