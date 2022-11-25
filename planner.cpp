@@ -543,12 +543,11 @@ string unordered_set_to_string(unordered_set<GroundedCondition, GroundedConditio
 class node 
 {
     private:
-        unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> node_conditions;
-        string string_conditions;
-        double g,h,f;
-        node* parent;
-        double a = numeric_limits<double>::infinity(); 
-        GroundedAction applied_action;
+        unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> node_conditions; //Set of conditions in unordereds set form 
+        string string_conditions; //A string containing the same set of conditions
+        double g,h,f; //Cost values for A*
+        node* parent;// Node pointer for backtraking 
+        GroundedAction applied_action;//We want to save the action that was applied to get to this node 
     public:
         
         node(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> state, double g, double h,node* parent,GroundedAction action)
@@ -910,15 +909,14 @@ list<GroundedAction> gen_fsble_actions(
     vector<vector<vector<string>>>& all_comb,
     Action& action,
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& actual_condition
-)
+) //This function returns a list of actions that obey the preconditions
 {
     unordered_set<Condition, ConditionHasher, ConditionComparator> preconditions;
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_precondition;
-    preconditions = action.get_preconditions();
-    list<GroundedAction> feasible_actions;
-    auto a_args = action.get_args();
-    auto a_predicate = action.get_name();
-    vector<string> combs_arg;
+    auto a_args = action.get_args(); //Action arguments
+    auto a_predicate = action.get_name();//Action predicates
+    list<GroundedAction> feasible_actions; // List containing actions
+    vector<string> combs_arg; 
     int arg_idx = 0; 
     int comb_i = 0;
     int  a_arg_size = action.get_args().size();
@@ -930,6 +928,7 @@ list<GroundedAction> gen_fsble_actions(
         args_2_idx[*it] = arg_idx;
         ++arg_idx;
     }
+    preconditions = action.get_preconditions();
     //While loop to create all possible combinations of actions
     while(comb_i < all_comb[a_arg_size-1].size())
     {
@@ -982,7 +981,7 @@ list<GroundedAction> gen_fsble_actions(
     
 }
 
-double getMatchedConditions(node* actual_node,unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& goal_condition)
+double getMatchedConditions(node* actual_node,unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& goal_condition) //Returns the number of conditions that matched with a "goal" condition. 
 {
     int matched_conditions = 0; 
     auto actual_gc = actual_node->get_unord_set_cond(); 
@@ -1000,7 +999,7 @@ unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionCompa
     Action& action,
     GroundedAction& feasible_action,
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& actual_condition
-)
+)//This executes the effects of the action and remove any condition that is false 
 {
     unordered_set<Condition, ConditionHasher, ConditionComparator> a_effects;
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> succ_effect;
@@ -1029,7 +1028,7 @@ unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionCompa
     }
     //While loop to create all possible combinations of actions
     //Creating a vector with all possible combinations of the same size of the arguments in the action(Vector of vectors of strings)
-    //After creating the map, now is time to check preconditions
+    //After creating the map, now is time to check effects
     for(Condition c:a_effects)
         {
             auto c_predicate = c.get_predicate();
@@ -1049,9 +1048,9 @@ unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionCompa
                 }
             }
             auto artificial_precond = GroundedCondition(c_predicate,precond_arg,c.get_truth());
-            succ_effect.insert(artificial_precond);
+            succ_effect.insert(artificial_precond); 
         }
-    for(auto itr = succ_effect.begin(); itr != succ_effect.end();++itr)
+    for(auto itr = succ_effect.begin(); itr != succ_effect.end();++itr) //FOr every grounded "effect" remove any state that is fasle and insert any new ones
     {
         GroundedCondition gr_effect = *itr;
         if(!gr_effect.get_truth())
@@ -1064,24 +1063,23 @@ unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionCompa
             }
     }
 
-    // affected_condition.erase(GroundedCondition("Clear",{"A"}));
     return affected_condition;
 }
 
 list<GroundedAction> ComputeSymbolicAstar(
     Env* env
 )
-{
+{    
     priority_queue<node*,vector<node*>,custom> open_ptr;
     unordered_set<node*,nodeHasher,nodeComparator> close_list;
-    map<string,double> open_ptr_track;
-    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> successor_condition;
-    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
-    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
+    map<string,double> open_ptr_track; //Keeps track of the g-value of every node in open list 
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> successor_condition;//A set of conditions for the "successor" node
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();//Initial conditions
+    unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();//Goal conditions
     list<node*> path; 
     list<GroundedAction> path_action;
+    list<Action> available_act = env->get_actions(); //ALl the available actions of the environment 
     vector<vector<vector<string>>> all_comb;
-    list<Action> available_act = env->get_actions();
     int goal_num_gc = goal_condition.size();
     int max_size = env->get_symbols().size();
     //Creating all possible combinations of symbols for all possible subsets. 
@@ -1090,19 +1088,22 @@ list<GroundedAction> ComputeSymbolicAstar(
         vector<vector<string>> combs = getAllCombinations(env->get_symbols_vec(),i);
         all_comb.push_back(combs);
     }
-
-    //Heurisctics as 0 for the moment
-    //Initializing Open list 
-    open_ptr.emplace(new node(initial_condition,0,0,nullptr,GroundedAction("No_action",list<string> {"A"})));
     
+    //Initializing Open list with start node
+    node* start_node = new node(initial_condition,0,0,nullptr,GroundedAction("No_action",list<string> {"A"}));
+    double start_h_val = goal_num_gc - getMatchedConditions(start_node,goal_condition);
+    start_node->set_h(start_h_val);
+    start_node->get_f_value();
+    open_ptr.emplace(start_node);
+
     while(!open_ptr.empty())
     {
-        node* actual_node = open_ptr.top();
-        auto actual_gc = actual_node->get_unord_set_cond();
-        close_list.insert(actual_node);
-        open_ptr.pop();
+        node* actual_node = open_ptr.top();  //Get node with min f-value in open list 
+        auto actual_gc = actual_node->get_unord_set_cond(); 
+        close_list.insert(actual_node); // insert node into close list
+        open_ptr.pop(); //remove node from open list
         //Goal Checking 
-        int match_cond = getMatchedConditions(actual_node,goal_condition);
+        int match_cond = getMatchedConditions(actual_node,goal_condition); //returns how many conditions of the goal are met
         if(match_cond >= goal_num_gc)
         {
             cout<<"Goal founded!" << endl;
@@ -1117,10 +1118,10 @@ list<GroundedAction> ComputeSymbolicAstar(
             }
             return path_action;
         }
-        for(Action a:available_act)
+        for(Action a:available_act) //FOr all available actions get feasible actions from the actual_node
         {
             list<GroundedAction> feasible_actions = gen_fsble_actions(env,all_comb,a,actual_gc);
-            for(auto it = feasible_actions.begin(); it!=feasible_actions.end();++it)
+            for(auto it = feasible_actions.begin(); it!=feasible_actions.end();++it) //Insert every feasible action into the open list
             {
                 successor_condition = execute_action(env,a,*it,actual_gc);
                 node* succ_node = new node(successor_condition,GroundedAction("null",list<string> {"A"}));
@@ -1161,9 +1162,9 @@ list<GroundedAction> ComputeSymbolicAstar(
 
 list<GroundedAction> planner(Env* env)
 {
-    // blocks world example
+    //Compute path using A*
     list<GroundedAction> node_path = ComputeSymbolicAstar(env);
-    node_path.back();
+    node_path.pop_back();
     node_path.reverse();
     return node_path;
 }
