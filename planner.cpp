@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <limits>
 #include <queue>
+#include <chrono>
 #include "Helper_funcs.h"
 #define SYMBOLS 0
 #define INITIAL 1
@@ -529,10 +530,21 @@ list<string> parse_symbols(string symbols_str)
 }
 
 //------------------Code added by AF below
+string unordered_set_to_string(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& conditions_set)
+{
+    string cond_string ="";
+    for(auto it = conditions_set.begin(); it!=conditions_set.end();++it)
+    {
+        GroundedCondition cond = *it;
+        cond_string += cond.toString();
+    }
+    return cond_string;
+}
 class node 
 {
     private:
         unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> node_conditions;
+        string string_conditions;
         double g,h,f;
         node* parent;
         double a = numeric_limits<double>::infinity(); 
@@ -540,12 +552,13 @@ class node
     public:
         
         node(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> state, double g, double h,node* parent,GroundedAction action)
-        :node_conditions{state},g{g},h{h},parent{parent},applied_action{action}
+        :node_conditions{state},string_conditions{unordered_set_to_string(state)},g{g},h{h},parent{parent},applied_action{action}
         {
             this->f= g+h;
         }
+
         node(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> state,GroundedAction null_action)
-        :node_conditions{state},applied_action{null_action}{
+        :node_conditions{state},string_conditions{unordered_set_to_string(state)},applied_action{null_action}{
             this-> g =numeric_limits<double>::infinity();
             this-> h = 0; 
             this->f=g+h;
@@ -565,10 +578,6 @@ class node
         void set_parent(node* parent)
         {
             this->parent = parent;
-        }
-        void set_conditions(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> conditions)
-        {
-            this->node_conditions = conditions;
         }
         void set_applied_action(GroundedAction action)
         {
@@ -590,23 +599,16 @@ class node
         {
             return this->applied_action;
         }
-        unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> get_condition() const
+        string get_condition() const
+        {
+            return this->string_conditions;
+        }
+        auto get_unord_set_cond() const
         {
             return this->node_conditions;
         }
 
 };
-
-string unordered_set_to_string(unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& conditions_set)
-{
-    string cond_string ="";
-    for(auto it = conditions_set.begin(); it!=conditions_set.end();++it)
-    {
-        GroundedCondition cond = *it;
-        cond_string += cond.toString();
-    }
-    return cond_string;
-}
 
 struct custom
 {
@@ -618,12 +620,10 @@ struct nodeComparator
 {
     bool operator()(const node* lhs,const node* rhs) const
     {   
-        auto set_lhs = lhs->get_condition();
-        auto set_rhs = rhs->get_condition();
-        string lhs_string = unordered_set_to_string(set_lhs);
-        string rhs_string = unordered_set_to_string(set_rhs);
+        auto lhs_cond = lhs->get_condition();
+        auto rhs_cond = rhs->get_condition();
 
-        return lhs_string == rhs_string;
+        return lhs_cond == rhs_cond;
     }
 };
 
@@ -631,9 +631,8 @@ struct nodeHasher
 {
     size_t operator()(const node* node_cond) const
     {
-        auto set = node_cond->get_condition();
-        string set_string = unordered_set_to_string(set);
-        return hash<string>{}(set_string);
+        auto condition_strong = node_cond->get_condition();
+        return hash<string>{}(condition_strong);
     }
 };
 //------------------Code added by AF above
@@ -983,7 +982,20 @@ list<GroundedAction> gen_fsble_actions(
     
 }
 
- unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> execute_action(
+double getMatchedConditions(node* actual_node,unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator>& goal_condition)
+{
+    int matched_conditions = 0; 
+    auto actual_gc = actual_node->get_unord_set_cond(); 
+    for(GroundedCondition c:actual_gc)
+        {
+            if(goal_condition.find(c)!= goal_condition.end())
+            {
+                ++matched_conditions;
+            }
+        }
+    return matched_conditions;
+}
+unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> execute_action(
     Env* env,
     Action& action,
     GroundedAction& feasible_action,
@@ -1056,20 +1068,22 @@ list<GroundedAction> gen_fsble_actions(
     return affected_condition;
 }
 
-vector<node*> ComputeSymbolicAstar(
+list<GroundedAction> ComputeSymbolicAstar(
     Env* env
 )
 {
     priority_queue<node*,vector<node*>,custom> open_ptr;
     unordered_set<node*,nodeHasher,nodeComparator> close_list;
+    map<string,double> open_ptr_track;
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> successor_condition;
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> initial_condition = env-> get_initial_condition();
     unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionComparator> goal_condition = env-> get_goal_condition();
-    vector<node*> path; 
+    list<node*> path; 
+    list<GroundedAction> path_action;
     vector<vector<vector<string>>> all_comb;
     list<Action> available_act = env->get_actions();
+    int goal_num_gc = goal_condition.size();
     int max_size = env->get_symbols().size();
-    int matched_conditions = 0;
     //Creating all possible combinations of symbols for all possible subsets. 
     for(int i = 1; i <= max_size;++i)
     {
@@ -1084,52 +1098,56 @@ vector<node*> ComputeSymbolicAstar(
     while(!open_ptr.empty())
     {
         node* actual_node = open_ptr.top();
-        auto actual_state = actual_node->get_condition();
-        auto actual_gc = actual_node->get_condition();
+        auto actual_gc = actual_node->get_unord_set_cond();
         close_list.insert(actual_node);
         open_ptr.pop();
         //Goal Checking 
-        for(GroundedCondition c:actual_gc)
+        int match_cond = getMatchedConditions(actual_node,goal_condition);
+        if(match_cond >= goal_num_gc)
         {
-            if(goal_condition.find(c)!= goal_condition.end())
+            cout<<"Goal founded!" << endl;
+            path.push_back(actual_node);
+            cout<<actual_node->get_condition()<<endl;
+            while(!(path.back()->get_parent() == nullptr))
             {
-                ++matched_conditions;
-                if(matched_conditions == goal_condition.size())
-                {
-                    cout<<"Goal founded!" << endl;
-                    string action_name = actual_node->get_applied_action().get_name();
-                    path.push_back(actual_node);
-                    while(!(path.back()->get_parent() == nullptr))
-                    {
-                        node* father = path.back()->get_parent();
-                        path.emplace_back(father);
-                    }
-                    return path;
-                }
+                node* father = path.back()->get_parent();
+                auto applied_act = father->get_applied_action();
+                path.emplace_back(father);
+                path_action.emplace_back(applied_act);
             }
+            return path_action;
         }
-        matched_conditions = 0;
         for(Action a:available_act)
         {
-            list<GroundedAction> feasible_actions = gen_fsble_actions(env,all_comb,a,actual_state);
+            list<GroundedAction> feasible_actions = gen_fsble_actions(env,all_comb,a,actual_gc);
             for(auto it = feasible_actions.begin(); it!=feasible_actions.end();++it)
             {
-                successor_condition = execute_action(env,a,*it,actual_state);
+                successor_condition = execute_action(env,a,*it,actual_gc);
                 node* succ_node = new node(successor_condition,GroundedAction("null",list<string> {"A"}));
+                string succ_string_gc = succ_node->get_condition();
                 double g_val = actual_node->get_g_value() + 1;
-                double h_val = 0;
                 if(close_list.find(succ_node)!=close_list.end())
                     continue;
                 else
                 {
-                    if(succ_node->get_g_value() > g_val)
+                    if(open_ptr_track.find(succ_string_gc) != open_ptr_track.end())
                     {
+                        if(open_ptr_track[succ_string_gc] > g_val)
+                        {
+                            succ_node->set_g(g_val);
+                        }
+                    }
+                    else
+                    {
+                        double h_val =goal_num_gc-getMatchedConditions(succ_node,goal_condition);
+                        // double h_val = 0;
                         succ_node->set_g(g_val);
                         succ_node->set_h(h_val);
                         succ_node->set_f();
                         succ_node->set_parent(actual_node);
                         succ_node->set_applied_action(*it);
                         open_ptr.push(succ_node);
+                        open_ptr_track.emplace(succ_string_gc,g_val);
                     }
                 }
             }
@@ -1137,23 +1155,17 @@ vector<node*> ComputeSymbolicAstar(
 
     }
     cout<<"No Path Founded"<<endl;
-    return path;
+    return path_action;
 }
 //------------------Code added by AF above
 
 list<GroundedAction> planner(Env* env)
 {
     // blocks world example
-    vector<node*> node_path = ComputeSymbolicAstar(env);
-    list<GroundedAction> actions_path;
-
-    for(auto itr= node_path.rbegin()+1 ; itr != node_path.rend(); ++itr)
-    {
-        node* n = *itr;
-        GroundedAction applied = n->get_applied_action();
-        actions_path.push_back(applied);
-    }
-    return actions_path;
+    list<GroundedAction> node_path = ComputeSymbolicAstar(env);
+    node_path.back();
+    node_path.reverse();
+    return node_path;
 }
 
 int main(int argc, char* argv[])
@@ -1169,15 +1181,17 @@ int main(int argc, char* argv[])
     {
         cout << *env;
     }
-
+    auto start_time = std::chrono::system_clock::now();
     list<GroundedAction> actions = planner(env);
-
+    auto end_time = std::chrono::system_clock::now();
+    auto time_delay = std::chrono::duration_cast<std::chrono::nanoseconds> (end_time-start_time);
+    float time_passed = time_delay.count()*1e-9;
     cout << "\nPlan: " << endl;
     for (GroundedAction gac : actions)
     {
         cout << gac << endl;
     }
-    
+    cout<<"Planning time: "<< time_passed << " seconds" << endl;
     delete env; 
 
     return 0;
