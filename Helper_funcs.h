@@ -34,28 +34,40 @@ template<typename T> void print_vector(const std::vector<T>& inputVector)
     }
     std::cout<<std::endl;
 }
-// template<typename T> std::vector<std::vector<T>> subsets(int n, int r)
-//     {
-//     std::vector<bool> v(n);
-//     std::vector
-//     std::fill(v.begin(), v.begin() + r, true);
 
-//     do  {
-//         std::vector<int> p;
-//         for (int i = 0; i < n; ++i) 
-//             if (v[i]) 
-//                 p.push_back(i);
-//         do  {
-//             std::cout << " { ";
-//             for(auto i : p)
-//                 std::cout << i << ' ';
-//             std::cout << "} ";
-//             } while(std::next_permutation(p.begin(), p.end()));
-//         } while (std::prev_permutation(v.begin(), v.end()));
-//     }
-
-// void subsets(int n)
-//     {
-//     for(int r=0; r<=n; ++r)
-//         subsets(n, r);
-//     }
+class results
+{
+    private:
+        double time;
+        double cost_of_plan;
+        int expanded_states;
+    public:
+        results(double time,double plan,int states)
+        :time{time},cost_of_plan{plan},expanded_states{states}{};
+        results()
+        :time{0},cost_of_plan{0},expanded_states{0}{};
+        void set_planning_time(double time)
+        {
+            this->time = time;
+        }
+        void set_cost_of_plan(double cost_plan)
+        {
+            this->cost_of_plan = cost_plan;
+        }
+        void set_num_states_expanded(int states_expand)
+        {
+            this->expanded_states = states_expand;
+        }
+        double get_planning_time()
+        {
+            return this->time;
+        }
+        double get_cost_of_plan()
+        {
+            return this->cost_of_plan;
+        }
+        int get_states_expanded()
+        {
+            return this->expanded_states;
+        }
+};

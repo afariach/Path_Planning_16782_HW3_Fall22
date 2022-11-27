@@ -1067,7 +1067,8 @@ unordered_set<GroundedCondition, GroundedConditionHasher, GroundedConditionCompa
 }
 
 list<GroundedAction> ComputeSymbolicAstar(
-    Env* env
+    Env* env,
+    results& res
 )
 {    
     priority_queue<node*,vector<node*>,custom> open_ptr;
@@ -1091,9 +1092,9 @@ list<GroundedAction> ComputeSymbolicAstar(
     
     //Initializing Open list with start node
     node* start_node = new node(initial_condition,0,0,nullptr,GroundedAction("No_action",list<string> {"A"}));
-    double start_h_val = goal_num_gc - getMatchedConditions(start_node,goal_condition);
-    start_node->set_h(start_h_val);
-    start_node->get_f_value();
+    // double start_h_val = goal_num_gc - getMatchedConditions(start_node,goal_condition);
+    // start_node->set_h(start_h_val);
+    // start_node->get_f_value();
     open_ptr.emplace(start_node);
 
     while(!open_ptr.empty())
@@ -1109,6 +1110,7 @@ list<GroundedAction> ComputeSymbolicAstar(
             cout<<"Goal founded!" << endl;
             cout<<"Node State:"<< endl;
             path.push_back(actual_node);
+            path_action.emplace_back(actual_node->get_applied_action());
             cout<<actual_node->get_condition()<<endl;
             while(!(path.back()->get_parent() == nullptr))
             {
@@ -1117,6 +1119,8 @@ list<GroundedAction> ComputeSymbolicAstar(
                 path.emplace_back(father);
                 path_action.emplace_back(applied_act);
             }
+            res.set_cost_of_plan(actual_node->get_g_value());
+            res.set_num_states_expanded(close_list.size());
             return path_action;
         }
         for(Action a:available_act) //FOr all available actions get feasible actions from the actual_node
@@ -1141,8 +1145,8 @@ list<GroundedAction> ComputeSymbolicAstar(
                     }
                     else
                     {
-                        double h_val =goal_num_gc-getMatchedConditions(succ_node,goal_condition);
-                        // double h_val = 0;
+                        // double h_val =goal_num_gc-getMatchedConditions(succ_node,goal_condition);
+                        double h_val = 0;
                         succ_node->set_g(g_val);
                         succ_node->set_h(h_val);
                         succ_node->set_f();
@@ -1161,10 +1165,10 @@ list<GroundedAction> ComputeSymbolicAstar(
 }
 //------------------Code added by AF above
 
-list<GroundedAction> planner(Env* env)
+list<GroundedAction> planner(Env* env,results& res)
 {
     //Compute path using A*
-    list<GroundedAction> node_path = ComputeSymbolicAstar(env);
+    list<GroundedAction> node_path = ComputeSymbolicAstar(env,res);
     node_path.pop_back();
     node_path.reverse();
     return node_path;
@@ -1184,16 +1188,20 @@ int main(int argc, char* argv[])
         cout << *env;
     }
     auto start_time = std::chrono::system_clock::now();
-    list<GroundedAction> actions = planner(env);
+    results res = results();
+    list<GroundedAction> actions = planner(env,res);
     auto end_time = std::chrono::system_clock::now();
     auto time_delay = std::chrono::duration_cast<std::chrono::nanoseconds> (end_time-start_time);
     float time_passed = time_delay.count()*1e-9;
+    res.set_planning_time(time_passed);
     cout << "\nPlan: " << endl;
     for (GroundedAction gac : actions)
     {
         cout << gac << endl;
     }
-    cout<<"Planning time: "<< time_passed << " seconds" << endl;
+    cout<<"Planning time: "<<res.get_planning_time()<< " seconds" << endl;
+    cout<<"Cost of plan: "<<res.get_cost_of_plan()<< endl;
+    cout<<"States expanded in search: "<< res.get_states_expanded() << endl;
     delete env; 
 
     return 0;

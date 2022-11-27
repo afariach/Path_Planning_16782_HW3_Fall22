@@ -9,7 +9,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${fileDirname}/${fileBasenameNoExtension}.out",
-        "args": ["${fileDirname}/BlocksTriangle.txt"],
+        "args": ["${fileDirname}/FireExtinguisher.txt"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
