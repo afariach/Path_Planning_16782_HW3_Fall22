@@ -1092,9 +1092,9 @@ list<GroundedAction> ComputeSymbolicAstar(
     
     //Initializing Open list with start node
     node* start_node = new node(initial_condition,0,0,nullptr,GroundedAction("No_action",list<string> {"A"}));
-    // double start_h_val = goal_num_gc - getMatchedConditions(start_node,goal_condition);
-    // start_node->set_h(start_h_val);
-    // start_node->get_f_value();
+    double start_h_val = goal_num_gc - getMatchedConditions(start_node,goal_condition);
+    start_node->set_h(start_h_val);
+    start_node->get_f_value();
     open_ptr.emplace(start_node);
 
     while(!open_ptr.empty())
@@ -1145,8 +1145,8 @@ list<GroundedAction> ComputeSymbolicAstar(
                     }
                     else
                     {
-                        // double h_val =goal_num_gc-getMatchedConditions(succ_node,goal_condition);
-                        double h_val = 0;
+                        double h_val =goal_num_gc-getMatchedConditions(succ_node,goal_condition);
+                        // double h_val = 0;
                         succ_node->set_g(g_val);
                         succ_node->set_h(h_val);
                         succ_node->set_f();
